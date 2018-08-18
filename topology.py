@@ -172,5 +172,5 @@ def TCCTopology():
 
 if __name__ == '__main__':
     call(['mn', '-c'])
-    setLogLevel('debug')
+    setLogLevel('info')
     TCCTopology()
