@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+from subprocess import call
+
 from mininet.cli import CLI
 from mininet.log import setLogLevel, info
 from mininet.net import Mininet
@@ -169,5 +171,6 @@ def TCCTopology():
 
 
 if __name__ == '__main__':
+    call(['mn', '-c'])
     setLogLevel('debug')
     TCCTopology()
