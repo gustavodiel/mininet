@@ -14,7 +14,6 @@ from mininet.node import RemoteController
 controller_ip = '192.168.56.1'
 controller_port = 6653
 
-
 # ################
 
 
@@ -69,7 +68,7 @@ def fix_network_manager(node, interface):
     :param interface: Interface's name
     """
 
-    interface_file = '/net/network/interfaces'
+    interface_file = '/etc/network/interfaces'
     line = '\niface {} inet manual\n'.format(interface)
     config = open(interface_file).read()
     if line not in config:
@@ -95,9 +94,7 @@ def connect_to_internet(network, interface='eth0', switch='s1', node_ip='10.0.0.
     prefix_length = subnet.split('/')[1]
     routes = [subnet]
 
-    info(
-        '*** Connecting to Internet with interface {}, switch {}, node IP {}, and subnet {}\n'.format(interface, switch,
-                                                                                                      node_ip, subnet))
+    info('*** Connecting to Internet with interface {}, switch {}, node IP {}, and subnet {}\n'.format(interface, switch, node_ip, subnet))
 
     # Create node in root namespace
     node = Node('root', isNamespace=False)
