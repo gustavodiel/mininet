@@ -81,7 +81,7 @@ def fix_network_manager(node, interface):
     node.cmd('service network-manager restart')
 
 
-def connect_to_internet(network, interface='eth0', switch='s1', node_ip='10.0.0.254', subnet='10.0.0.0/8'):
+def connect_to_internet(network, interface='eth0', switch='s1', node_ip='10.0.0.1', subnet='10.0.0.0/8'):
     """
     Configure NAT to connect to Internet.
     :param network: Mininet's network
@@ -112,7 +112,7 @@ def connect_to_internet(network, interface='eth0', switch='s1', node_ip='10.0.0.
     start_nat_router(node, interface)
 
     for host in network.hosts:
-        host.cmd('ip route flush root 0/0')
+        # host.cmd('ip route flush root 0/0')
         host.cmd('route add -net {} dev {}'.format(subnet, host.defaultIntf()))
         host.cmd('route add default gw {}'.format(node_ip))
 
@@ -163,7 +163,7 @@ def TCCTopology():
     net.get('s2').start([controller])
     net.get('s3').start([controller])
 
-    info('*** Post configure switches and hosts')
+    info('*** Post configure switches and hosts\n')
 
     node_nat.startShell()
 
