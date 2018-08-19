@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 from subprocess import call
 
@@ -81,7 +81,7 @@ def fix_network_manager(node, interface):
     node.cmd('service network-manager restart')
 
 
-def connect_to_internet(network, interface='eth0', switch='s1', node_ip='10.0.0.0.254', subnet='10.0.0.0/8'):
+def connect_to_internet(network, interface='eth0', switch='s1', node_ip='10.0.0.254', subnet='10.0.0.0/8'):
     """
     Configure NAT to connect to Internet.
     :param network: Mininet's network
