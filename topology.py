@@ -13,7 +13,7 @@ from mininet.node import RemoteController
 # Controller Settings #
 # ##               ## #
 
-controller_ip = '192.168.56.1'
+controller_ip = raw_input('Insert the IP addres or press ENTER for the default (192.168.56.1)\n') or '192.168.56.1'
 controller_port = 6653
 
 # ################
@@ -124,7 +124,7 @@ def TCCTopology():
                   build=False,
                   ipBase='10.0.0.0/8')
 
-    info('*** Adding controller\n')
+    info('*** Adding controller at {}\n'.format(controller_ip))
     controller = net.addController(name='Floodlight Controller',
                                    controller=RemoteController,
                                    ip=controller_ip,
