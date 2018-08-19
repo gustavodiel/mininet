@@ -7,10 +7,28 @@ Glen Gibb, February 2011
 (slight modifications by BL, 5/13)
 """
 
+from argparse import ArgumentParser
+
 from mininet.cli import CLI
-from mininet.log import lg
-from mininet.node import Node
-from mininet.topolib import TreeNet
+from mininet.log import setLogLevel, info
+from mininet.net import Mininet
+from mininet.node import Host, Node
+from mininet.node import OVSKernelSwitch
+from mininet.node import RemoteController
+
+parser = ArgumentParser(description='Cleans Mininet and initiates TCC topology.')
+parser.add_argument('IP', metavar='ip', type=str, help="Floodlight's IP", default='192.168.56.1', const='192.168.56.1')
+
+args = parser.parse_args()
+
+# ##               ## #
+# Controller Settings #
+# ##               ## #
+
+controller_ip = args.IP
+controller_port = 6653
+
+# ################
 
 #################################
 def startNAT( root, inetIntf='eth1', subnet='10.0/8' ):
@@ -97,11 +115,54 @@ def connectToInternet( network, switch='s1', rootip='10.254', subnet='10.0/8'):
 
     return root
 
+def TCCTopology():
+    net = Mininet(topo=None,
+                  build=False,
+                  ipBase='10.0.0.0/8')
+
+    info('*** Adding controller at {}\n'.format(controller_ip))
+    controller = net.addController(name='c0',
+                                   controller=RemoteController,
+                                   ip=controller_ip,
+                                   port=controller_port,
+                                   protocol='tcp')
+
+    info('*** Adding Switches\n')
+    switch_1 = net.addSwitch('s1', cls=OVSKernelSwitch)
+    switch_2 = net.addSwitch('s2', cls=OVSKernelSwitch)
+    switch_3 = net.addSwitch('s3', cls=OVSKernelSwitch)
+
+    info('*** Adding Hosts\n')
+    diel = net.addHost('diel', cls=Host, ip='10.0.0.2', defaultRoute=None)
+    alice = net.addHost('alice', cls=Host, ip='10.0.1.2', defaultRoute=None)
+    bob = net.addHost('bob', cls=Host, ip='10.0.1.3', defaultRoute=None)
+
+    info('*** Adding links\n')
+    net.addLink(switch_1, switch_2)
+    net.addLink(switch_1, switch_3)
+
+    net.addLink(switch_2, diel)
+
+    net.addLink(switch_3, alice)
+    net.addLink(switch_3, bob)
+
+    info('*** Starting controller\n')
+    controller.start()
+
+    info('*** Starting switches\n')
+    net.get('s1').start([controller])
+    net.get('s2').start([controller])
+    net.get('s3').start([controller])
+
+    info('*** Post configure switches and hosts\n')
+
 if __name__ == '__main__':
-    lg.setLogLevel( 'info')
-    net = TreeNet( depth=1, fanout=4 )
+    setLogLevel( 'info')
+    net = TCCTopology()
     # Configure and start NATted connectivity
+    info('*** Starting network!\n')
     rootnode = connectToInternet( net )
+    info('*** NAT Rotuer added: {}\n'.format(rootnode))
     print("*** Hosts are running and should have internet connectivity")
     print("*** Type 'exit' or control-D to shut down network")
     CLI( net )
