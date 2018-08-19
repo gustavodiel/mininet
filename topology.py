@@ -25,54 +25,58 @@ controller_port = 6653
 # ################
 
 
-def start_nat_router(node, interface='eth0', subnet='10.0.0.0/8'):
+def start_nat_router(root, external_interface='eth1', subnet='10.0/16' ):
     """
     Start NAT/Forwarding between Mininet and external network.
-    :param node: The router node
-    :param interface: Node's interface with external access
+    :param root: The router node
+    :param external_interface: Node's interface with external access
     :param subnet: Mininet's subnet
     """
 
-    info('*** Starting NAT on node {}, interface: {} with subnet {}\n'.format(node, interface, subnet))
+    info('*** Starting NAT on node {}, interface: {} with subnet {}\n'.format(root, external_interface, subnet))
 
     # Identify the interface connecting to mininet's network
-    local_interface = node.defaultIntf()
+    local_interface = root.defaultIntf()
 
     # remove current rules
-    node.cmd('iptables -F')
-    node.cmd('iptables -t nat -F')
+    root.cmd('iptables -F')
+    root.cmd('iptables -t nat -F')
 
     # Create entries for traffic
-    node.cmd('iptables -P INPUT ACCEPT')
-    node.cmd('iptables -P OUTPUT ACCEPT')
-    node.cmd('iptables -P FORWARD DROP')
+    root.cmd('iptables -P INPUT ACCEPT')
+    root.cmd('iptables -P OUTPUT ACCEPT')
+    root.cmd('iptables -P FORWARD DROP')
 
     # Do the NAT
-    node.cmd('iptables -I FORWARD -i {} -d {} -j DROP'.format(local_interface, subnet))
-    node.cmd('iptables -A FORWARD -i {} -d {} -j ACCEPT'.format(local_interface, subnet))
-    node.cmd('iptables -A FORWARD -i {} -s {} -j ACCEPT'.format(interface, subnet))
-    node.cmd('iptables -t nat -A POSTROUTING -o {} -j MASQUERADE'.format(interface))
+    root.cmd('iptables -I FORWARD -i {} -d {} -j DROP'.format(local_interface, subnet))
+    root.cmd('iptables -A FORWARD -i {} -s {} -j ACCEPT'.format(local_interface, subnet))
+    root.cmd('iptables -A FORWARD -i {} -d {} -j ACCEPT'.format(external_interface, subnet))
+    root.cmd('iptables -t nat -A POSTROUTING -o {} -j MASQUERADE'.format(external_interface))
+
+    # Disable forwarding of internal hosts
+    root.cmd('iptables -I INPUT -s 10.0.2.0/8 -d 10.0.1.0/8 -j DROP'.format(local_interface, subnet))
+    root.cmd('iptables -I FORWARD -i {} -d {} -j DROP'.format(local_interface, subnet))
 
     # Enable IPv4 Forwarding
-    node.cmd('sysctl net.ipv4.ip_forward=1')
+    root.cmd('sysctl net.ipv4.ip_forward=1')
 
 
-def stop_nat_router(node):
+def stop_nat_router(root):
     """
     Stop NAT/Forwarding
-    :param node: The router node
+    :param root: The router node
     """
-    node.cmd('iptables -F')
-    node.cmd('iptables -t nat -F')
+    root.cmd('iptables -F')
+    root.cmd('iptables -t nat -F')
 
     # Disable forwarding
-    node.cmd('sysctl net.ipv4.ip_forward=0')
+    root.cmd('sysctl net.ipv4.ip_forward=0')
 
 
-def fix_network_manager(node, interface):
+def fix_network_manager(root, interface):
     """
     Prevents NetworkManager from messing with the interface, providing the manual config
-    :param node: NAT node
+    :param root: NAT node
     :param interface: Interface's name
     """
 
@@ -84,7 +88,7 @@ def fix_network_manager(node, interface):
         with open(interface_file, 'a') as f:
             f.write(line)
 
-    node.cmd('service network-manager restart')
+    root.cmd('service network-manager restart')
 
 
 def connect_to_internet(network, interface='eth0', switch='s1', node_ip='10.0.0.1', subnet='10.0.0.0/8'):
@@ -143,9 +147,9 @@ def TCCTopology():
     switch_3 = net.addSwitch('s3', cls=OVSKernelSwitch)
 
     info('*** Adding Hosts\n')
-    diel = net.addHost('diel', cls=Host, ip='10.0.0.2', defaultRoute=None)
-    alice = net.addHost('alice', cls=Host, ip='10.0.1.2', defaultRoute=None)
-    bob = net.addHost('bob', cls=Host, ip='10.0.1.3', defaultRoute=None)
+    diel = net.addHost('diel', cls=Host, ip='10.0.1.2', defaultRoute=None)
+    alice = net.addHost('alice', cls=Host, ip='10.0.2.2', defaultRoute=None)
+    bob = net.addHost('bob', cls=Host, ip='10.0.2.3', defaultRoute=None)
 
     info('*** Adding links\n')
     net.addLink(switch_1, switch_2)
