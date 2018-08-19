@@ -156,6 +156,11 @@ def TCCTopology():
 
     info('*** Post configure switches and hosts\n')
 
+    net.build()
+    net.start()
+
+    return net
+
 if __name__ == '__main__':
     setLogLevel( 'info')
     net = TCCTopology()
