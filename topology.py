@@ -11,7 +11,7 @@ from mininet.node import OVSKernelSwitch
 from mininet.node import RemoteController
 
 parser = ArgumentParser(description='Cleans Mininet and initiates TCC topology.')
-parser.add_argument('IP', metavar='ip', type=str, help="Floodlight's IP")
+parser.add_argument('IP', metavar='ip', type=str, help="Floodlight's IP", default='192.168.56.1')
 
 args = parser.parse_args()
 
@@ -19,7 +19,7 @@ args = parser.parse_args()
 # Controller Settings #
 # ##               ## #
 
-controller_ip = args.IP('Insert the IP addres or press ENTER for the default (192.168.56.1)\n') or '192.168.56.1'
+controller_ip = args.IP
 controller_port = 6653
 
 # ################
