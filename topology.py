@@ -1,5 +1,19 @@
 #!/usr/bin/python2
 
+"""
+Create a simple topology with a NAT router at the top
+by Gustavo Diel
+
+
+        router
+          |
+        switch
+       /      \
+      s1      s2
+      |      /  \
+    diel   alice bob
+"""
+
 from argparse import ArgumentParser
 from subprocess import call
 
@@ -91,7 +105,7 @@ def fix_network_manager(root, interface):
     root.cmd('service network-manager restart')
 
 
-def connect_to_internet(network, interface='eth0', switch='s1', node_ip='10.0.0.1', subnet='10.0.0.0/8'):
+def connect_to_internet(network, interface='eth1', switch='s1', node_ip='10.0.0.1', subnet='10.0.0.0/8'):
     """
     Configure NAT to connect to Internet.
     :param network: Mininet's network
@@ -135,7 +149,7 @@ def TCCTopology():
                   ipBase='10.0.0.0/8')
 
     info('*** Adding controller at {}\n'.format(controller_ip))
-    controller = net.addController(name='Floodlight Controller',
+    controller = net.addController(name='c0',
                                    controller=RemoteController,
                                    ip=controller_ip,
                                    port=controller_port,
@@ -147,9 +161,9 @@ def TCCTopology():
     switch_3 = net.addSwitch('s3', cls=OVSKernelSwitch)
 
     info('*** Adding Hosts\n')
-    diel = net.addHost('diel', cls=Host, ip='10.0.1.2', defaultRoute=None)
-    alice = net.addHost('alice', cls=Host, ip='10.0.2.2', defaultRoute=None)
-    bob = net.addHost('bob', cls=Host, ip='10.0.2.3', defaultRoute=None)
+    diel = net.addHost('diel', cls=Host, ip='10.0.0.2', defaultRoute=None)
+    alice = net.addHost('alice', cls=Host, ip='10.0.1.2', defaultRoute=None)
+    bob = net.addHost('bob', cls=Host, ip='10.0.1.3', defaultRoute=None)
 
     info('*** Adding links\n')
     net.addLink(switch_1, switch_2)
@@ -159,11 +173,6 @@ def TCCTopology():
 
     net.addLink(switch_3, alice)
     net.addLink(switch_3, bob)
-
-    info('*** Starting network!\n')
-    node_nat = connect_to_internet(net, interface='enp0s8')
-
-    info('*** NAT Rotuer added: {}\n'.format(node_nat))
 
     info('*** Starting controller\n')
     controller.start()
@@ -175,14 +184,23 @@ def TCCTopology():
 
     info('*** Post configure switches and hosts\n')
 
-    node_nat.cmd('xterm &')
+    net.build()
+    net.start()
 
-    CLI(net)
-
-    net.stop()
+    return net
 
 
 if __name__ == '__main__':
     call(['mn', '-c'])
-    setLogLevel('info')
-    TCCTopology()
+    setLogLevel( 'info')
+    net = TCCTopology()
+    # Configure and start NATted connectivity
+    info('*** Starting network!\n')
+    nat_node = connect_to_internet( net )
+    info('*** NAT Rotuer added: {}\n'.format(nat_node))
+    info("*** Hosts are running and should have internet connectivity")
+    info("*** Type 'exit' or control-D to shut down network")
+    CLI( net )
+    # Shut down NAT
+    stop_nat_router( nat_node )
+    net.stop()
