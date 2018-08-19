@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python2
 
 from subprocess import call
 
@@ -27,7 +27,7 @@ def start_nat_router(node, interface='eth0', subnet='10.0.0.0/8'):
     :param subnet: Mininet's subnet
     """
 
-    info('*** [NAT] Starting NAT on node {}, interface: {} with subnet {}\n'.format(node, interface, subnet))
+    info('*** Starting NAT on node {}, interface: {} with subnet {}\n'.format(node, interface, subnet))
 
     # Identify the interface connecting to mininet's network
     local_interface = node.defaultIntf()
@@ -164,6 +164,8 @@ def TCCTopology():
     net.get('s3').start([controller])
 
     info('*** Post configure switches and hosts')
+
+    node_nat.startShell()
 
     CLI(net)
 
