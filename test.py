@@ -13,7 +13,7 @@ from mininet.node import Node
 from mininet.topolib import TreeNet
 
 #################################
-def startNAT( root, inetIntf='eth0', subnet='10.0/8' ):
+def startNAT( root, inetIntf='eth1', subnet='10.0/8' ):
     """Start NAT/forwarding between Mininet and external network
     root: node to access iptables from
     inetIntf: interface for internet access
