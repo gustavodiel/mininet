@@ -35,7 +35,7 @@ class InternetTopo(Topo):
         # set up inet switch
         inetSwitch = self.addSwitch('s0')
         # add inet host
-        inetHost = Host('h0', isNamespace=False)
+        inetHost = self.addHost('h0', isNamespace=False)
         self.addLink(inetSwitch, inetHost)
 
         # add local nets

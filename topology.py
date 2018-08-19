@@ -39,7 +39,7 @@ controller_port = 6653
 # ################
 
 
-def start_nat_router(root, external_interface='eth1', subnet='10.0/16' ):
+def start_nat_router(root, external_interface='eth1', subnet='10.0.0.0/16' ):
     """
     Start NAT/Forwarding between Mininet and external network.
     :param root: The router node
@@ -68,12 +68,8 @@ def start_nat_router(root, external_interface='eth1', subnet='10.0/16' ):
     root.cmd('iptables -t nat -A POSTROUTING -o {} -j MASQUERADE'.format(external_interface))
 
     # Remove unwanted forwarding
-    root.cmd('iptables -I FORWARD -s 10.0.1.0/8 -d 10.0.2.0/8 -j DROP')
-    root.cmd('iptables -I FORWARD -s 10.0.2.0/8 -d 10.0.1.0/8 -j DROP')
-
-    # Disable forwarding of internal hosts
-    root.cmd('iptables -I INPUT -s 10.0.2.0/8 -d 10.0.1.0/8 -j DROP'.format(local_interface, subnet))
-    root.cmd('iptables -I FORWARD -i {} -d {} -j DROP'.format(local_interface, subnet))
+    root.cmd('iptables -I INPUT -d 10.0.2.0/8 -j DROP')
+    root.cmd('iptables -I INPUT -d 10.0.1.0/8 -j DROP')
 
     # Enable IPv4 Forwarding
     root.cmd('sysctl net.ipv4.ip_forward=1')
@@ -139,7 +135,7 @@ def connect_to_internet(network, interface='eth1', switch='s1', node_ip='10.0.0.
     start_nat_router(node, interface)
 
     for host in network.hosts:
-        # host.cmd('ip route flush root 0/0')
+        host.cmd('ip route flush root 0/0')
         host.cmd('route add -net {} dev {}'.format(subnet, host.defaultIntf()))
         host.cmd('route add default gw {}'.format(node_ip))
 
@@ -203,6 +199,7 @@ if __name__ == '__main__':
     info('*** NAT Rotuer added: {}\n'.format(nat_node))
     info("*** Hosts are running and should have internet connectivity")
     info("*** Type 'exit' or control-D to shut down network")
+    nat_node.cmd('xterm &')
     CLI( net )
     # Shut down NAT
     stop_nat_router( nat_node )

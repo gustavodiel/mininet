@@ -170,6 +170,7 @@ if __name__ == '__main__':
     info('*** NAT Rotuer added: {}\n'.format(rootnode))
     print("*** Hosts are running and should have internet connectivity")
     print("*** Type 'exit' or control-D to shut down network")
+    rootnode.cmd("xterm &")
     CLI( net )
     # Shut down NAT
     stopNAT( rootnode )
