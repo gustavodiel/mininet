@@ -67,6 +67,10 @@ def start_nat_router(root, external_interface='eth1', subnet='10.0/16' ):
     root.cmd('iptables -A FORWARD -i {} -d {} -j ACCEPT'.format(external_interface, subnet))
     root.cmd('iptables -t nat -A POSTROUTING -o {} -j MASQUERADE'.format(external_interface))
 
+    # Remove unwanted forwarding
+    root.cmd('iptables -I FORWARD -s 10.0.1.0/8 -d 10.0.2.0/8 -j DROP')
+    root.cmd('iptables -I FORWARD -s 10.0.2.0/8 -d 10.0.1.0/8 -j DROP')
+
     # Disable forwarding of internal hosts
     root.cmd('iptables -I INPUT -s 10.0.2.0/8 -d 10.0.1.0/8 -j DROP'.format(local_interface, subnet))
     root.cmd('iptables -I FORWARD -i {} -d {} -j DROP'.format(local_interface, subnet))
@@ -99,8 +103,8 @@ def fix_network_manager(root, interface):
     config = open(interface_file).read()
     if line not in config:
         print('Adding {} to {}\n'.format(line.strip(), interface_file))
-        with open(interface_file, 'a') as f:
-            f.write(line)
+        with open(interface_file, 'a') as file:
+            file.write(line)
 
     root.cmd('service network-manager restart')
 
@@ -118,7 +122,6 @@ def connect_to_internet(network, interface='eth1', switch='s1', node_ip='10.0.0.
 
     switch = network.get(switch)
     prefix_length = subnet.split('/')[1]
-    routes = [subnet]
 
     info('*** Connecting to Internet with interface {}, switch {}, node IP {}, and subnet {}\n'.format(interface, switch, node_ip, subnet))
 
@@ -161,9 +164,9 @@ def TCCTopology():
     switch_3 = net.addSwitch('s3', cls=OVSKernelSwitch)
 
     info('*** Adding Hosts\n')
-    diel = net.addHost('diel', cls=Host, ip='10.0.0.2', defaultRoute=None)
-    alice = net.addHost('alice', cls=Host, ip='10.0.1.2', defaultRoute=None)
-    bob = net.addHost('bob', cls=Host, ip='10.0.1.3', defaultRoute=None)
+    diel = net.addHost('diel', cls=Host, ip='10.0.1.2', defaultRoute=None)
+    alice = net.addHost('alice', cls=Host, ip='10.0.2.2', defaultRoute=None)
+    bob = net.addHost('bob', cls=Host, ip='10.0.2.3', defaultRoute=None)
 
     info('*** Adding links\n')
     net.addLink(switch_1, switch_2)
