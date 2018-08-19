@@ -31,7 +31,7 @@ controller_port = 6653
 # ################
 
 #################################
-def startNAT( root, inetIntf='eth1', subnet='10.0/8' ):
+def startNAT( root, inetIntf='eth1', subnet='10.0/16' ):
     """Start NAT/forwarding between Mininet and external network
     root: node to access iptables from
     inetIntf: interface for internet access
@@ -83,7 +83,7 @@ def fixNetworkManager( root, intf ):
         # hopefully this won't disconnect you
         root.cmd( 'service network-manager restart' )
 
-def connectToInternet( network, switch='s1', rootip='10.254', subnet='10.0/8'):
+def connectToInternet( network, switch='s1', rootip='10.254', subnet='10.0/16'):
     """Connect the network to the internet
        switch: switch to connect to root namespace
        rootip: address for interface in root namespace
