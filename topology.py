@@ -25,7 +25,7 @@ from mininet.node import OVSKernelSwitch
 from mininet.node import RemoteController
 
 parser = ArgumentParser(description='Cleans Mininet and initiates TCC topology.')
-parser.add_argument('IP', metavar='ip', type=str, help="Floodlight's IP", default='192.168.56.1', const='192.168.56.1', nargs='?')
+parser.add_argument('IP', metavar='ip', type=str, help="Floodlight's IP", default='127.0.0.1', const='127.0.0.1', nargs='?')
 
 args = parser.parse_args()
 
@@ -62,14 +62,14 @@ def start_nat_router(root, external_interface='eth1', subnet='10.0.0.0/16' ):
     root.cmd('iptables -P FORWARD DROP')
 
     # Do the NAT
-    root.cmd('iptables -I FORWARD -i {} -d {} -j DROP'.format(local_interface, subnet))
+    root.cmd('iptables -I FORWARD -i {} -d {} -s {} -j DROP'.format(local_interface, subnet, subnet))
+
+    root.cmd('iptables -A FORWARD -i {} -d {} -j DROP'.format(local_interface, subnet))
     root.cmd('iptables -A FORWARD -i {} -s {} -j ACCEPT'.format(local_interface, subnet))
     root.cmd('iptables -A FORWARD -i {} -d {} -j ACCEPT'.format(external_interface, subnet))
-    root.cmd('iptables -t nat -A POSTROUTING -o {} -j MASQUERADE'.format(external_interface))
 
-    # Remove unwanted forwarding
-    root.cmd('iptables -I INPUT -d 10.0.2.0/8 -j DROP')
-    root.cmd('iptables -I INPUT -d 10.0.1.0/8 -j DROP')
+    root.cmd('iptables -A FORWARD -i {} -d {} -s {} -j DROP'.format(local_interface, subnet, subnet))
+    root.cmd('iptables -t nat -A POSTROUTING -o {} -j MASQUERADE'.format(external_interface))
 
     # Enable IPv4 Forwarding
     root.cmd('sysctl net.ipv4.ip_forward=1')
