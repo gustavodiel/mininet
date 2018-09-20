@@ -39,7 +39,7 @@ controller_port = 6653
 # ################
 
 
-def start_nat_router(root, external_interface='eth1', subnet='10.0.0.0/16' ):
+def start_nat_router(root, external_interface='eth1', subnet='10.0.0.0/16'):
     """
     Start NAT/Forwarding between Mininet and external network.
     :param root: The router node
@@ -116,18 +116,19 @@ def connect_to_internet(network, interface='eth1', switch='s1', node_ip='10.0.0.
     :return Node with Internet access
     """
 
-    switch = network.get(switch)
-    prefix_length = subnet.split('/')[1]
+    for switch in ['s2', 's3']:
+        switch = network.get(switch)
+        prefix_length = subnet.split('/')[1]
 
-    info('*** Connecting to Internet with interface {}, switch {}, node IP {}, and subnet {}\n'.format(interface, switch, node_ip, subnet))
+        info('*** Connecting to Internet with interface {}, switch {}, node IP {}, and subnet {}\n'.format(interface, switch, node_ip, subnet))
 
-    # Create node in root namespace
-    node = Node('root', isNamespace=False)
-    fix_network_manager(node, 'root-{}'.format(interface))
+        # Create node in root namespace
+        node = Node('root', isNamespace=False)
+        fix_network_manager(node, 'root-{}'.format(interface))
 
-    # Create link for switch and node
-    link = network.addLink(node, switch)
-    link.intf1.setIP(node_ip, prefixLen=prefix_length)
+        # Create link for switch and node
+        link = network.addLink(node, switch)
+        link.intf1.setIP(node_ip, prefixLen=prefix_length)
 
     # Start network with included node
     network.start()
@@ -145,7 +146,7 @@ def connect_to_internet(network, interface='eth1', switch='s1', node_ip='10.0.0.
 def TCCTopology():
     net = Mininet(topo=None,
                   build=False,
-                  ipBase='10.0.0.0/8')
+                  ipBase='10.0.0.0/24')
 
     info('*** Adding controller at {}\n'.format(controller_ip))
     controller = net.addController(name='c0',
@@ -160,13 +161,13 @@ def TCCTopology():
     switch_3 = net.addSwitch('s3', cls=OVSKernelSwitch)
 
     info('*** Adding Hosts\n')
-    diel = net.addHost('diel', cls=Host, ip='10.0.1.2', defaultRoute=None)
-    alice = net.addHost('alice', cls=Host, ip='10.0.2.2', defaultRoute=None)
-    bob = net.addHost('bob', cls=Host, ip='10.0.2.3', defaultRoute=None)
+    diel = net.addHost('diel', cls=Host, ip='10.0.1.2/24', defaultRoute=None, mac='00:00:00:00:00:01')
+    alice = net.addHost('alice', cls=Host, ip='10.0.2.2/24', defaultRoute=None, mac='00:00:00:00:00:02')
+    bob = net.addHost('bob', cls=Host, ip='10.0.2.3/24', defaultRoute=None, mac='00:00:00:00:00:03')
 
     info('*** Adding links\n')
-    net.addLink(switch_1, switch_2)
-    net.addLink(switch_1, switch_3)
+    # net.addLink(switch_1, switch_2)
+    # net.addLink(switch_1, switch_3)
 
     net.addLink(switch_2, diel)
 
