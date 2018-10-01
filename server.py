@@ -26,6 +26,7 @@ class ReceiverThread():
             anotherSock.connect((ip, port))
             print('sending "%s"' % str(msg))
             anotherSock.sendall(msg)
+            anotherSock.sendall(bytes('Finished :3', 'utf-8'))
             anotherSock.close()
         except:
             print("Error!")

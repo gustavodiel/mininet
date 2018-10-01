@@ -36,10 +36,10 @@ args = parser.parse_args()
 controller_ip = args.IP
 controller_port = 6653
 
-# ################
+# ################### #
 
 
-def start_nat_router(root, external_interface='eth1', subnet='10.0.0.0/16'):
+def start_nat_router(root, external_interface='enp0s3', subnet='10.0.0.0/16', local_interface=None):
     """
     Start NAT/Forwarding between Mininet and external network.
     :param root: The router node
@@ -47,32 +47,17 @@ def start_nat_router(root, external_interface='eth1', subnet='10.0.0.0/16'):
     :param subnet: Mininet's subnet
     """
 
-    info('*** Starting NAT on node {}, interface: {} with subnet {}\n'.format(root, external_interface, subnet))
-
     # Identify the interface connecting to mininet's network
-    local_interface = root.defaultIntf()
+    if not local_interface:
+        local_interface = root.defaultIntf()
 
-    # remove current rules
-    root.cmd('iptables -F')
-    root.cmd('iptables -t nat -F')
-
-    # Create entries for traffic
-    root.cmd('iptables -P INPUT ACCEPT')
-    root.cmd('iptables -P OUTPUT ACCEPT')
-    root.cmd('iptables -P FORWARD DROP')
+    info('*** Starting NAT on node {}, interface: {} to interface {} with subnet {}\n'.format(root, external_interface, local_interface, subnet))
 
     # Do the NAT
-    root.cmd('iptables -I FORWARD -i {} -d {} -s {} -j DROP'.format(local_interface, subnet, subnet))
-
-    root.cmd('iptables -A FORWARD -i {} -d {} -j DROP'.format(local_interface, subnet))
+    root.cmd('iptables -I FORWARD -i {} -d {} -j DROP'.format(local_interface, subnet))
     root.cmd('iptables -A FORWARD -i {} -s {} -j ACCEPT'.format(local_interface, subnet))
-    root.cmd('iptables -A FORWARD -i {} -d {} -j ACCEPT'.format(external_interface, subnet))
-
-    root.cmd('iptables -A FORWARD -i {} -d {} -s {} -j DROP'.format(local_interface, subnet, subnet))
-    root.cmd('iptables -t nat -A POSTROUTING -o {} -j MASQUERADE'.format(external_interface))
-
-    # Enable IPv4 Forwarding
-    root.cmd('sysctl net.ipv4.ip_forward=1')
+    root.cmd('iptables -A FORWARD -o {} -d {} -j ACCEPT'.format(local_interface, subnet))
+    root.cmd("iptables -t nat -A POSTROUTING -s {} '!' -d {} -j MASQUERADE".format(subnet, subnet))
 
 
 def stop_nat_router(root):
@@ -105,37 +90,67 @@ def fix_network_manager(root, interface):
     root.cmd('service network-manager restart')
 
 
-def connect_to_internet(network, interface='eth1', switch='s1', node_ip='10.0.0.1', subnet='10.0.0.0/8'):
+def connect_to_internet(network, interface='enp0s3', node_ip='10.0.0.1', subnet='10.0.0.0/8'):
     """
     Configure NAT to connect to Internet.
     :param network: Mininet's network
     :param interface: Interface connecting to Internet
-    :param switch: Switch to connect to Root Namespace
     :param node_ip: Address for interface in Root Namespace
     :param subnet: Mininet's Subnet
     :return Node with Internet access
     """
+    prefix_length = subnet.split('/')[1]
 
-    for switch in ['s2', 's3']:
-        switch = network.get(switch)
-        prefix_length = subnet.split('/')[1]
+    # Create node in root namespace
+    node = Node('root', inNamespace=False)
+
+
+    # remove current rules
+    node.cmd('iptables -F')
+    node.cmd('iptables -t nat -F')
+
+    # Create entries for traffic
+    node.cmd('iptables -P INPUT ACCEPT')
+    node.cmd('iptables -P OUTPUT ACCEPT')
+    node.cmd('iptables -P FORWARD DROP')
+
+    # Enable IPv4 Forwarding
+    node.cmd('sysctl net.ipv4.ip_forward=1')
+
+    for sw in ['s1', 's2']:
+        switch = network.get(sw)
+        interface_to_add = 'root-eth0'
+
+        if sw == 's2':
+            node_ip = '10.0.0.2'
+            interface_to_add = 'root-eth1'
+
 
         info('*** Connecting to Internet with interface {}, switch {}, node IP {}, and subnet {}\n'.format(interface, switch, node_ip, subnet))
 
-        # Create node in root namespace
-        node = Node('root', isNamespace=False)
-        fix_network_manager(node, 'root-{}'.format(interface))
+        fix_network_manager(node, interface_to_add)
 
         # Create link for switch and node
         link = network.addLink(node, switch)
         link.intf1.setIP(node_ip, prefixLen=prefix_length)
+        info(link.intf1)
 
     # Start network with included node
     network.start()
 
-    start_nat_router(node, interface)
+    start_nat_router(node, interface, local_interface='root-eth0')
+    start_nat_router(node, interface, local_interface='root-eth1')
+
+    node.cmd('route add -net 10.0.1.0/24 dev root-eth0')
+    node.cmd('route add -net 10.0.2.0/24 dev root-eth1')
 
     for host in network.hosts:
+        if host.name == 'diel':
+            node_ip = '10.0.0.1'
+        else:
+            node_ip = '10.0.0.2'
+
+        info('*** Configuring host {} to GW: {}\n'.format(host, node_ip))
         host.cmd('ip route flush root 0/0')
         host.cmd('route add -net {} dev {}'.format(subnet, host.defaultIntf()))
         host.cmd('route add default gw {}'.format(node_ip))
@@ -146,7 +161,7 @@ def connect_to_internet(network, interface='eth1', switch='s1', node_ip='10.0.0.
 def TCCTopology():
     net = Mininet(topo=None,
                   build=False,
-                  ipBase='10.0.0.0/24')
+                  ipBase='10.0.0.0/8')
 
     info('*** Adding controller at {}\n'.format(controller_ip))
     controller = net.addController(name='c0',
@@ -158,7 +173,6 @@ def TCCTopology():
     info('*** Adding Switches\n')
     switch_1 = net.addSwitch('s1', cls=OVSKernelSwitch)
     switch_2 = net.addSwitch('s2', cls=OVSKernelSwitch)
-    switch_3 = net.addSwitch('s3', cls=OVSKernelSwitch)
 
     info('*** Adding Hosts\n')
     diel = net.addHost('diel', cls=Host, ip='10.0.1.2/24', defaultRoute=None, mac='00:00:00:00:00:01')
@@ -166,26 +180,22 @@ def TCCTopology():
     bob = net.addHost('bob', cls=Host, ip='10.0.2.3/24', defaultRoute=None, mac='00:00:00:00:00:03')
 
     info('*** Adding links\n')
-    # net.addLink(switch_1, switch_2)
-    # net.addLink(switch_1, switch_3)
 
-    net.addLink(switch_2, diel)
+    net.addLink(switch_1, diel)
 
-    net.addLink(switch_3, alice)
-    net.addLink(switch_3, bob)
+    net.addLink(switch_2, alice)
+    net.addLink(switch_2, bob)
 
     info('*** Starting controller\n')
     controller.start()
 
     info('*** Starting switches\n')
-    net.get('s1').start([controller])
-    net.get('s2').start([controller])
-    net.get('s3').start([controller])
+    switch_1.start([controller])
+    switch_2.start([controller])
 
     info('*** Post configure switches and hosts\n')
 
     net.build()
-    net.start()
 
     return net
 
@@ -198,8 +208,8 @@ if __name__ == '__main__':
     info('*** Starting network!\n')
     nat_node = connect_to_internet( net )
     info('*** NAT Rotuer added: {}\n'.format(nat_node))
-    info("*** Hosts are running and should have internet connectivity")
-    info("*** Type 'exit' or control-D to shut down network")
+    info("*** Hosts are running and should have internet connectivity\n")
+    info("*** Type 'exit' or control-D to shut down network\n")
     nat_node.cmd('xterm &')
     CLI( net )
     # Shut down NAT

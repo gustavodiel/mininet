@@ -40,30 +40,19 @@ def startNAT( root, inetIntf='enp0s3', subnet='10.0.0.0/16' ):
 
     # Flush any currently active rules
     root.cmd( 'iptables -F' )
-    print('iptables -F')
     root.cmd( 'iptables -t nat -F' )
-    print( 'iptables -t nat -F' )
 
     # Create default entries for unmatched traffic
     root.cmd( 'iptables -P INPUT ACCEPT' )
-    print( 'iptables -P INPUT ACCEPT' )
     root.cmd( 'iptables -P OUTPUT ACCEPT' )
-    print( 'iptables -P OUTPUT ACCEPT' )
     root.cmd( 'iptables -P FORWARD DROP' )
-    print( 'iptables -P FORWARD DROP' )
 
     # Configure NAT
     root.cmd( 'iptables -I FORWARD -i', localIntf, '-d', subnet, '-j DROP' )
-    print( 'iptables -I FORWARD -i %s -d %s -j DROP' % (localIntf, subnet) )
-
     root.cmd( 'iptables -A FORWARD -i', localIntf, '-s', subnet, '-j ACCEPT' )
-    print( 'iptables -A FORWARD -i %s -s %s -j ACCEPT' % (localIntf, subnet) )
-
     root.cmd( 'iptables -A FORWARD -i', inetIntf, '-d', subnet, '-j ACCEPT' )
-    print( 'iptables -A FORWARD -i %s -d %s -j ACCEPT' % (inetIntf, subnet) )
 
     root.cmd( 'iptables -t nat -A POSTROUTING -o ', inetIntf, '-j MASQUERADE' )
-    print( 'iptables -t nat -A POSTROUTING -o %s -j MASQUERADE' % inetIntf )
 
     # Instruct the kernel to perform forwarding
     root.cmd( 'sysctl net.ipv4.ip_forward=1' )

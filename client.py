@@ -45,11 +45,12 @@ class ListenThread(threading.Thread):
 
                 # Receive the data in small chunks and retransmit it
                 while True:
-                    data = connection.recv(16)
+                    data = connection.recv(2048)
                     print('received "%s"' % data)
+                    data = connection.recv(2048)
+                    print('also received %s' % data)
                     print('Ending', client_address)
                     break
-
             finally:
                 # Clean up the connection
                 connection.close()
