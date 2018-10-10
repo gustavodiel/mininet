@@ -7,7 +7,7 @@ import sys
 class ReceiverThread():
     def __init__(self):
         super(ReceiverThread, self).__init__()
-        self.port = 12312
+        self.port = 17500
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -21,7 +21,7 @@ class ReceiverThread():
         try:
             anotherSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             ip, _ = server
-            port = 12312
+            port = 17500
             print("connecting to", (ip, port))
             anotherSock.connect((ip, port))
             print('sending "%s"' % str(msg))

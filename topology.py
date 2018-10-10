@@ -175,9 +175,9 @@ def TCCTopology():
     switch_2 = net.addSwitch('s2', cls=OVSKernelSwitch)
 
     info('*** Adding Hosts\n')
-    diel = net.addHost('diel', cls=Host, ip='10.0.1.2/24', defaultRoute=None, mac='00:00:00:00:00:01')
-    alice = net.addHost('alice', cls=Host, ip='10.0.2.2/24', defaultRoute=None, mac='00:00:00:00:00:02')
-    bob = net.addHost('bob', cls=Host, ip='10.0.2.3/24', defaultRoute=None, mac='00:00:00:00:00:03')
+    diel = net.addHost('diel', cls=Host, ip='10.0.1.2/24', defaultRoute=None, mac='00:00:00:00:01:02')
+    alice = net.addHost('alice', cls=Host, ip='10.0.2.2/24', defaultRoute=None, mac='00:00:00:00:02:02')
+    bob = net.addHost('bob', cls=Host, ip='10.0.2.3/24', defaultRoute=None, mac='00:00:00:00:02:03')
 
     info('*** Adding links\n')
 

@@ -10,12 +10,9 @@ class SenderThread():
     def __init__(self):
         super(SenderThread, self).__init__()
         self.ip = "<broadcast>"
-        self.port = 12312
+        self.port = 17500
         self.message = "Hello, World!"
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         i = 0
 
         self.listener = ListenThread()
@@ -23,6 +20,9 @@ class SenderThread():
 
         while i < 50000:
             time.sleep(0.5)
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.sendto(bytes('{} - {}'.format(self.message, i), "utf-8"), (self.ip, self.port))
             print("Sent")
             i = i + 1
@@ -33,7 +33,7 @@ class SenderThread():
 class ListenThread(threading.Thread):
     def run(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # TCP
-        server_address = ('0.0.0.0', 12312)
+        server_address = ('0.0.0.0', 17500)
 
         sock.bind(server_address)
         sock.listen(1)
