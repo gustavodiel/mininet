@@ -14,6 +14,7 @@ BINDIR ?= $(PREFIX)/bin
 MANDIR ?= $(PREFIX)/share/man/man1
 DOCDIRS = doc/html doc/latex
 PDF = doc/latex/refman.pdf
+CC ?= cc
 
 CFLAGS += -Wall -Wextra
 
@@ -46,7 +47,7 @@ slowtest: $(MININET)
 	mininet/examples/test/runner.py -v
 
 mnexec: mnexec.c $(MN) mininet/net.py
-	cc $(CFLAGS) $(LDFLAGS) -DVERSION=\"`PYTHONPATH=. $(PYMN) --version`\" $< -o $@
+	$(CC) $(CFLAGS) $(LDFLAGS) -DVERSION=\"`PYTHONPATH=. $(PYMN) --version`\" $< -o $@
 
 install-mnexec: $(MNEXEC)
 	install -D $(MNEXEC) $(BINDIR)/$(MNEXEC)
@@ -55,13 +56,13 @@ install-manpages: $(MANPAGES)
 	install -D -t $(MANDIR) $(MANPAGES)
 
 install: install-mnexec install-manpages
-	$(PYTHON) setup.py install
+	$(PYTHON) -m pip install .
 
 develop: $(MNEXEC) $(MANPAGES)
 # 	Perhaps we should link these as well
 	install $(MNEXEC) $(BINDIR)
 	install $(MANPAGES) $(MANDIR)
-	$(PYTHON) setup.py develop
+	$(PYTHON) -m pip install -e . --no-binary
 
 man: $(MANPAGES)
 

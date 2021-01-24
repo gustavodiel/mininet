@@ -843,11 +843,26 @@ class MininetCluster( Mininet ):
     def addController( self, *args, **kwargs ):
         "Patch to update IP address to global IP address"
         controller = Mininet.addController( self, *args, **kwargs )
-        # Update IP address for controller that may not be local
-        if ( isinstance( controller, Controller)
-             and controller.IP() == '127.0.0.1'
-             and ' eth0:' in controller.cmd( 'ip link show' ) ):
-            Intf( 'eth0', node=controller ).updateIP()
+        loopback = '127.0.0.1'
+        if ( not isinstance( controller, Controller ) or
+             controller.IP() != loopback ):
+            return
+        # Find route to a different server IP address
+        serverIPs = [ ip for ip in self.serverIP.values()
+                      if ip is not controller.IP() ]
+        if not serverIPs:
+            return  # no remote servers - loopback is fine
+        remoteIP = serverIPs[ 0 ]
+        # Route should contain 'dev <intfname>'
+        route = controller.cmd( 'ip route get', remoteIP,
+                                r'| egrep -o "dev\s[^[:space:]]+"' )
+        if not route:
+            raise Exception('addController: no route from', controller,
+                            'to', remoteIP )
+        intf = route.split()[ 1 ].strip()
+        debug( 'adding', intf, 'to', controller )
+        Intf( intf, node=controller ).updateIP()
+        debug( controller, 'IP address updated to', controller.IP() )
         return controller
 
     def buildFromTopo( self, *args, **kwargs ):
@@ -860,7 +875,7 @@ class MininetCluster( Mininet ):
 
 def testNsTunnels( remote='ubuntu2', link=RemoteGRELink ):
     "Test tunnels between nodes in namespaces"
-    net = Mininet( host=RemoteHost, link=link )
+    net = Mininet( host=RemoteHost, link=link, waitConnected=True )
     h1 = net.addHost( 'h1')
     h2 = net.addHost( 'h2', server=remote )
     net.addLink( h1, h2 )
@@ -876,7 +891,8 @@ def testNsTunnels( remote='ubuntu2', link=RemoteGRELink ):
 def testRemoteNet( remote='ubuntu2', link=RemoteGRELink ):
     "Test remote Node classes"
     info( '*** Remote Node Test\n' )
-    net = Mininet( host=RemoteHost, switch=RemoteOVSSwitch, link=link )
+    net = Mininet( host=RemoteHost, switch=RemoteOVSSwitch, link=link,
+                   waitConnected=True )
     c0 = net.addController( 'c0' )
     # Make sure controller knows its non-loopback address
     Intf( 'eth0', node=c0 ).updateIP()

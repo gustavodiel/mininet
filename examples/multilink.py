@@ -13,7 +13,7 @@ from mininet.topo import Topo
 def runMultiLink():
     "Create and run multiple link network"
     topo = simpleMultiLinkTopo( n=2 )
-    net = Mininet( topo=topo )
+    net = Mininet( topo=topo, waitConnected=True )
     net.start()
     CLI( net )
     net.stop()
@@ -21,9 +21,7 @@ def runMultiLink():
 class simpleMultiLinkTopo( Topo ):
     "Simple topology with multiple links"
 
-    def __init__( self, n, **kwargs ):
-        Topo.__init__( self, **kwargs )
-
+    def build( self, n, **_kwargs ):
         h1, h2 = self.addHost( 'h1' ), self.addHost( 'h2' )
         s1 = self.addSwitch( 's1' )
 

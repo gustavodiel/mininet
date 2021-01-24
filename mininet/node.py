@@ -63,7 +63,7 @@ from time import sleep
 from mininet.log import info, error, warn, debug
 from mininet.util import ( quietRun, errRun, errFail, moveIntf, isShellBuiltin,
                            numCores, retry, mountCgroups, BaseString, decode,
-                           encode, Python3 )
+                           encode, getincrementaldecoder, Python3, which )
 from mininet.moduledeps import moduleDeps, pathCheck, TUN
 from mininet.link import Link, Intf, TCIntf, OVSIntf
 from re import findall
@@ -106,7 +106,11 @@ class Node( object ):
         self.waiting = False
         self.readbuf = ''
 
+        # Incremental decoder for buffered reading
+        self.decoder = getincrementaldecoder()
+
         # Start command interpreter shell
+        self.master, self.slave = None, None  # pylint
         self.startShell()
         self.mountPrivateDirs()
 
@@ -145,12 +149,12 @@ class Node( object ):
         # Spawn a shell subprocess in a pseudo-tty, to disable buffering
         # in the subprocess and insulate it from signals (e.g. SIGINT)
         # received by the parent
-        master, slave = pty.openpty()
-        self.shell = self._popen( cmd, stdin=slave, stdout=slave, stderr=slave,
-                                  close_fds=False )
+        self.master, self.slave = pty.openpty()
+        self.shell = self._popen( cmd, stdin=self.slave, stdout=self.slave,
+                                  stderr=self.slave, close_fds=False )
         # XXX BL: This doesn't seem right, and we should also probably
         # close our files when we exit...
-        self.stdin = os.fdopen( master, 'r' )
+        self.stdin = os.fdopen( self.master, 'r' )
         self.stdout = self.stdin
         self.pid = self.shell.pid
         self.pollOut = select.poll()
@@ -217,26 +221,30 @@ class Node( object ):
         # for intfName in self.intfNames():
         # if self.name in intfName:
         # quietRun( 'ip link del ' + intfName )
-        if self.waitExited and self.shell:
-            debug( 'waiting for', self.pid, 'to terminate\n' )
-            self.shell.wait()
+        if self.shell:
+            # Close ptys
+            self.stdin.close()
+            os.close(self.slave)
+            if self.waitExited:
+                debug( 'waiting for', self.pid, 'to terminate\n' )
+                self.shell.wait()
         self.shell = None
 
     # Subshell I/O, commands and control
 
-    def read( self, maxbytes=1024 ):
+    def read( self, size=1024 ):
         """Buffered read from node, potentially blocking.
-           maxbytes: maximum number of bytes to return"""
+           size: maximum number of characters to return"""
         count = len( self.readbuf )
-        if count < maxbytes:
-            data = decode( os.read( self.stdout.fileno(), maxbytes - count ) )
-            self.readbuf += data
-        if maxbytes >= len( self.readbuf ):
+        if count < size:
+            data = os.read( self.stdout.fileno(), size - count )
+            self.readbuf += self.decoder.decode( data )
+        if size >= len( self.readbuf ):
             result = self.readbuf
             self.readbuf = ''
         else:
-            result = self.readbuf[ :maxbytes ]
-            self.readbuf = self.readbuf[ maxbytes: ]
+            result = self.readbuf[ :size ]
+            self.readbuf = self.readbuf[ size: ]
         return result
 
     def readline( self ):
@@ -1374,10 +1382,12 @@ class Controller( Node ):
        OpenFlow controller."""
 
     def __init__( self, name, inNamespace=False, command='controller',
-                  cargs='-v ptcp:%d', cdir=None, ip="127.0.0.1",
-                  port=6653, protocol='tcp', **params ):
+                  cargs='ptcp:%d', cdir=None, ip="127.0.0.1",
+                  port=6653, protocol='tcp', verbose=False, **params ):
         self.command = command
         self.cargs = cargs
+        if verbose:
+            cargs = '-v ' + cargs
         self.cdir = cdir
         # Accept 'ip:port' syntax as shorthand
         if ':' in ip:
@@ -1442,7 +1452,7 @@ class Controller( Node ):
     @classmethod
     def isAvailable( cls ):
         "Is controller available?"
-        return quietRun( 'which controller' )
+        return which( 'controller' )
 
 
 class OVSController( Controller ):
@@ -1454,9 +1464,9 @@ class OVSController( Controller ):
 
     @classmethod
     def isAvailable( cls ):
-        return ( quietRun( 'which ovs-controller' ) or
-                 quietRun( 'which test-controller' ) or
-                 quietRun( 'which ovs-testcontroller' ) ).strip()
+        return (which( 'ovs-controller' ) or
+                which( 'test-controller' ) or
+                which( 'ovs-testcontroller' ))
 
 class NOX( Controller ):
     "Controller to run a NOX application."

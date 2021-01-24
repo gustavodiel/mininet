@@ -29,9 +29,7 @@ from mininet.util import irange
 
 class InternetTopo(Topo):
     "Single switch connected to n hosts."
-    def __init__(self, n=2, **opts):
-        Topo.__init__(self, **opts)
-
+    def build(self, n=2, **_kwargs ):
         # set up inet switch
         inetSwitch = self.addSwitch('s0')
         # add inet host
@@ -61,7 +59,7 @@ class InternetTopo(Topo):
 def run():
     "Create network and run the CLI"
     topo = InternetTopo()
-    net = Mininet(topo=topo)
+    net = Mininet(topo=topo, waitConnected=True )
     net.start()
     CLI(net)
     net.stop()

@@ -29,6 +29,8 @@ from subprocess import call
 from cmd import Cmd
 from os import isatty
 from select import poll, POLLIN
+import select
+import errno
 import sys
 import time
 import os
@@ -44,7 +46,8 @@ class CLI( Cmd ):
 
     prompt = 'mininet> '
 
-    def __init__( self, mininet, stdin=sys.stdin, script=None ):
+    def __init__( self, mininet, stdin=sys.stdin, script=None,
+                  *args, **kwargs ):
         """Start and run interactive or batch mode CLI
            mininet: Mininet network object
            stdin: standard input for CLI
@@ -53,11 +56,10 @@ class CLI( Cmd ):
         # Local variable bindings for py command
         self.locals = { 'net': mininet }
         # Attempt to handle input
-        self.stdin = stdin
         self.inPoller = poll()
         self.inPoller.register( stdin )
         self.inputFile = script
-        Cmd.__init__( self )
+        Cmd.__init__( self, *args, stdin=stdin, **kwargs )
         info( '*** Starting CLI:\n' )
 
         if self.inputFile:
@@ -142,7 +144,7 @@ class CLI( Cmd ):
     def do_help( self, line ):
         "Describe available CLI commands."
         Cmd.do_help( self, line )
-        if line is '':
+        if line == '':
             output( self.helpStr )
 
     def do_nodes( self, _line ):
@@ -397,6 +399,10 @@ class CLI( Cmd ):
                 error( 'invalid command: '
                        'switch <switch name> {start, stop}\n' )
 
+    def do_wait( self, _line ):
+        "Wait until all switches have connected to a controller"
+        self.mn.waitConnected()
+
     def default( self, line ):
         """Called on an input line when the command prefix is not recognized.
            Overridden to run shell commands when a node is the first
@@ -442,7 +448,7 @@ class CLI( Cmd ):
                 # XXX BL: this doesn't quite do what we want.
                 if False and self.inputFile:
                     key = self.inputFile.read( 1 )
-                    if key is not '':
+                    if key != '':
                         node.write( key )
                     else:
                         self.inputFile = None
@@ -459,6 +465,13 @@ class CLI( Cmd ):
                 # it's possible to interrupt ourselves after we've
                 # read data but before it has been printed.
                 node.sendInt()
+            except select.error as e:
+                # pylint: disable=unpacking-non-sequence
+                errno_, errmsg = e.args
+                # pylint: enable=unpacking-non-sequence
+                if errno_ != errno.EINTR:
+                    error( "select.error: %d, %s" % (errno_, errmsg) )
+                    node.sendInt()
 
     def precmd( self, line ):
         "allow for comments in the cli"

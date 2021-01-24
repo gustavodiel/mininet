@@ -100,10 +100,9 @@ class MininetFacade( object ):
 
 class ControlNetwork( Topo ):
     "Control Network Topology"
-    def __init__( self, n, dataController=DataController, **kwargs ):
+    def build( self, n, dataController=DataController, **_kwargs ):
         """n: number of data network controller nodes
            dataController: class for data network controllers"""
-        Topo.__init__( self, **kwargs )
         # Connect everything to a single switch
         cs0 = self.addSwitch( 'cs0' )
         # Add hosts which will serve as data network controllers
@@ -124,7 +123,8 @@ def run():
 
     info( '* Creating Control Network\n' )
     ctopo = ControlNetwork( n=4, dataController=DataController )
-    cnet = Mininet( topo=ctopo, ipBase='192.168.123.0/24', controller=None )
+    cnet = Mininet( topo=ctopo, ipBase='192.168.123.0/24',
+                    controller=None, waitConnected=True )
     info( '* Adding Control Network Controller\n')
     cnet.addController( 'cc0', controller=Controller )
     info( '* Starting Control Network\n')
@@ -134,7 +134,8 @@ def run():
     topo = TreeTopo( depth=2, fanout=2 )
     # UserSwitch so we can easily test failover
     sw = partial( UserSwitch, opts='--inactivity-probe=1 --max-backoff=1' )
-    net = Mininet( topo=topo, switch=sw, controller=None )
+    net = Mininet( topo=topo, switch=sw, controller=None,
+                   waitConnected=True )
     info( '* Adding Controllers to Data Network\n' )
     for host in cnet.hosts:
         if isinstance(host, Controller):
