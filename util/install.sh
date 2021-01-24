@@ -35,7 +35,7 @@ if [ "$ARCH" = "i686" ]; then ARCH="i386"; fi
 
 test -e /etc/debian_version && DIST="Debian"
 grep Ubuntu /etc/lsb-release &> /dev/null && DIST="Ubuntu"
-if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
+if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ] || [ "$DIST" = "Pop" ]; then
     # Truly non-interactive apt-get installation
     install='sudo DEBIAN_FRONTEND=noninteractive apt-get -y -q install'
     remove='sudo DEBIAN_FRONTEND=noninteractive apt-get -y -q remove'
@@ -83,7 +83,7 @@ KERNEL_HEADERS=kernel-headers-${KERNEL_NAME}
 # Treat Raspbian as Debian
 [ "$DIST" = 'Raspbian' ] && DIST='Debian'
 
-DISTS='Ubuntu|Debian|Fedora|RedHatEnterpriseServer|SUSE LINUX'
+DISTS='Ubuntu|Pop|Debian|Fedora|RedHatEnterpriseServer|SUSE LINUX'
 if ! echo $DIST | egrep "$DISTS" >/dev/null; then
     echo "Install.sh currently only supports $DISTS."
     exit 1
